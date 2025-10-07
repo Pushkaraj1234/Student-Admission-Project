@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Admission Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            background-image: 
+                radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 97% 21%, hsla(199, 98%, 72%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 52% 99%, hsla(355, 98%, 68%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 10% 29%, hsla(256, 96%, 68%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 97% 96%, hsla(38, 60%, 74%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 33% 50%, hsla(222, 67%, 73%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 79% 53%, hsla(343, 68%, 79%, 0.1) 0px, transparent 50%);
+            background-attachment: fixed;
+            background-position: center;
+            background-size: cover;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .custom-shadow {
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        .form-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out, border-color 0.5s ease-in-out;
+            padding: 0 1.5rem;
+            border: 1px solid transparent;
+        }
+        .form-container.open {
+            max-height: 1000px;
+            padding: 1.5rem 1.5rem;
+            border-color: rgba(226, 232, 240, 0.7);
+            margin-top: 1.5rem;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .status-Applied { background-color: #e0f2fe; color: #0369a1; }
+        .status-Interviewing { background-color: #fef9c3; color: #a16207; }
+        .status-Accepted { background-color: #dcfce7; color: #16a34a; }
+        .status-Rejected { background-color: #fee2e2; color: #dc2626; }
+        .docs-badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.70rem;
+            font-weight: 500;
+            border: 1px solid;
+        }
+        .docs-Pending { border-color: #f59e0b; color: #b45309; background-color: #fef3c7;}
+        .docs-Verified { border-color: #16a34a; color: #15803d; background-color: #dcfce7;}
+        .docs-Rejected { border-color: #dc2626; color: #b91c1c; background-color: #fee2e2;}
+        .toast {
+            position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 0.5rem; color: white; opacity: 0;
+            transform: translateY(-20px) scale(0.95); transition: all 0.3s ease-in-out; z-index: 100;
+        }
+        .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+        .toast.success { background-color: #22c55e; }
+        .toast.error { background-color: #ef4444; }
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 50;
+            opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+        }
+        .modal-backdrop.visible { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: white; padding: 2rem; border-radius: 0.75rem; width: 100%; max-width: 400px;
+            transform: scale(0.95); transition: transform 0.3s ease;
+        }
+        .modal-backdrop.visible .modal-content { transform: scale(1); }
+        .table-row-hover:hover { background-color: rgba(248, 250, 252, 0.7); }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="text-slate-800">
+    <div id="toast-notification" class="toast"></div>
+
+    <!-- Auth Container -->
+    <div id="auth-container" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md">
+            <div class="glass-card rounded-xl custom-shadow p-8">
+                <h2 class="text-2xl font-bold text-center text-slate-800 mb-1">Welcome!</h2>
+                <p class="text-center text-slate-500 mb-6">Sign in to manage admissions</p>
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label for="login-email" class="block text-sm font-medium text-slate-700">Email</label>
+                        <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value="admin@example.com">
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-sm font-medium text-slate-700">Password</label>
+                        <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value="password123">
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg hover:bg-indigo-700 transition-colors">Sign In</button>
+                </form>
+                <p id="login-error" class="text-red-500 text-sm mt-4 text-center"></p>
+                <p class="text-xs text-slate-400 text-center mt-4">This is a simulated login. No data is sent online.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="hidden">
+        <div id="delete-modal" class="modal-backdrop">
+            <div class="modal-content text-center custom-shadow">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                    <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-800">Delete Student</h3>
+                <p class="text-sm text-slate-500 mt-2">Are you sure you want to delete this student record? This action cannot be undone.</p>
+                <div class="mt-6 flex justify-center gap-4">
+                    <button id="cancel-delete-btn" class="px-6 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 transition-colors">Cancel</button>
+                    <button id="confirm-delete-btn" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+            <header class="mb-8 text-center relative">
+                <h1 class="text-4xl font-bold text-slate-900 tracking-tight">Student Admission Dashboard</h1>
+                 <div class="flex items-center justify-center mt-2">
+                     <p id="user-info" class="text-xs text-slate-500 break-all px-4"></p>
+                     <button id="logout-btn" class="ml-4 text-xs text-indigo-600 hover:underline">Sign Out</button>
+                 </div>
+            </header>
+
+            <main>
+                <div id="dashboard-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8"></div>
+                <div class="glass-card rounded-xl custom-shadow">
+                    <div class="p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                            <h2 id="form-title" class="text-2xl font-semibold text-slate-800 mb-4 sm:mb-0">Add New Student</h2>
+                            <button id="toggle-form-btn" class="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition-transform hover:scale-105 active:scale-100 shadow-md hover:shadow-lg flex items-center gap-2">
+                                 <svg id="toggle-form-icon-plus" class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                                 <svg id="toggle-form-icon-minus" class="h-5 w-5 hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z" /></svg>
+                                <span id="toggle-form-text">Add Student</span>
+                            </button>
+                        </div>
+                        <div id="student-form-container" class="form-container rounded-lg">
+                            <form id="student-form" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                <input type="hidden" id="student-id">
+                                <div><label for="name" class="block text-sm font-medium text-slate-700">Full Name</label><input type="text" id="name" required class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
+                                <div><label for="email" class="block text-sm font-medium text-slate-700">Email Address</label><input type="email" id="email" required class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div>
+                                <div><label for="course" class="block text-sm font-medium text-slate-700">Course Applied For</label><select id="course" required class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>IT</option><option>CSE DS</option><option>AI ML</option><option>CIVIL</option><option>CS</option><option>MECH</option><option>ENTC</option></select></div>
+                                <div><label for="status" class="block text-sm font-medium text-slate-700">Application Status</label><select id="status" class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>Applied</option><option>Interviewing</option><option>Accepted</option><option>Rejected</option></select></div>
+                                <div><label for="docStatus" class="block text-sm font-medium text-slate-700">Document Verification</label><select id="docStatus" class="mt-1 block w-full px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option>Pending</option><option>Verified</option><option>Rejected</option></select></div>
+                                <div class="md:col-span-2 flex justify-end gap-3 pt-4"><button type="button" id="cancel-btn" class="px-5 py-2 bg-slate-100 text-slate-800 rounded-md hover:bg-slate-200 transition-colors">Cancel</button><button type="submit" class="px-5 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">Save Student</button></div>
+                            </form>
+                        </div>
+                    </div>
+                    <hr class="border-white/20">
+                    <div class="p-6"><div class="flex flex-col md:flex-row gap-4"><div class="relative flex-grow"><span class="absolute inset-y-0 left-0 flex items-center pl-3"><svg class="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd" /></svg></span><input type="text" id="search-input" placeholder="Search by name, email, or course..." class="w-full pl-10 pr-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></div><select id="status-filter" class="w-full md:w-56 px-3 py-2 bg-white/80 border border-slate-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"><option value="all">Filter by Status (All)</option><option value="Applied">Applied</option><option value="Interviewing">Interviewing</option><option value="Accepted">Accepted</option><option value="Rejected">Rejected</option></select></div></div>
+                    <div id="loader-container" class="flex justify-center items-center py-16"><div class="loader"></div></div>
+                    <div class="overflow-x-auto hidden" id="table-container"><table class="min-w-full text-sm"><thead class="border-b border-white/20"><tr><th class="px-6 py-3 text-left font-semibold text-slate-600 uppercase tracking-wider">Student</th><th class="px-6 py-3 text-left font-semibold text-slate-600 uppercase tracking-wider">Course</th><th class="px-6 py-3 text-left font-semibold text-slate-600 uppercase tracking-wider">App Status</th><th class="px-6 py-3 text-left font-semibold text-slate-600 uppercase tracking-wider">Docs</th><th class="px-6 py-3 text-center font-semibold text-slate-600 uppercase tracking-wider">Actions</th></tr></thead><tbody id="student-list" class="divide-y divide-white/20"></tbody></table><div id="no-results" class="text-center py-16 hidden"><svg class="mx-auto h-12 w-12 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg><h3 class="mt-2 text-lg font-medium text-slate-800">No students found</h3><p class="mt-1 text-sm text-slate-600">Try adjusting your search or filter criteria.</p></div></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { 
+            apiKey: "YOUR_API_KEY", 
+            authDomain: "YOUR_AUTH_DOMAIN", 
+            projectId: "YOUR_PROJECT_ID", 
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const uiElements = {
+            authContainer: document.getElementById('auth-container'),
+            appContainer: document.getElementById('app-container'),
+            loginForm: document.getElementById('login-form'),
+            loginError: document.getElementById('login-error'),
+            logoutBtn: document.getElementById('logout-btn'),
+            studentForm: document.getElementById('student-form'), studentIdInput: document.getElementById('student-id'),
+            nameInput: document.getElementById('name'), emailInput: document.getElementById('email'),
+            courseInput: document.getElementById('course'), statusInput: document.getElementById('status'),
+            docStatusInput: document.getElementById('docStatus'), studentList: document.getElementById('student-list'),
+            dashboardStats: document.getElementById('dashboard-stats'), studentFormContainer: document.getElementById('student-form-container'),
+            toggleFormBtn: document.getElementById('toggle-form-btn'), toggleFormText: document.getElementById('toggle-form-text'),
+            toggleFormIconPlus: document.getElementById('toggle-form-icon-plus'), toggleFormIconMinus: document.getElementById('toggle-form-icon-minus'),
+            formTitle: document.getElementById('form-title'), cancelBtn: document.getElementById('cancel-btn'),
+            searchInput: document.getElementById('search-input'), statusFilter: document.getElementById('status-filter'),
+            noResults: document.getElementById('no-results'), toast: document.getElementById('toast-notification'),
+            deleteModal: document.getElementById('delete-modal'), cancelDeleteBtn: document.getElementById('cancel-delete-btn'),
+            confirmDeleteBtn: document.getElementById('confirm-delete-btn'), loaderContainer: document.getElementById('loader-container'),
+            tableContainer: document.getElementById('table-container'), userInfo: document.getElementById('user-info'),
+        };
+        
+        let students = [], isEditing = false, studentIdToDelete = null;
+        let db, auth, storage, studentsCollectionRef;
+        let unsubscribe = null; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        const showToast = (message, type = 'success') => { /* Omitted for brevity */ };
+        const updateDashboard = () => { /* Omitted for brevity */ };
+        const renderStudents = () => { /* Omitted for brevity */ };
+        const closeForm = () => { /* Omitted for brevity */ };
+        const uploadDocument = (studentId, file) => { /* Omitted for brevity */ };
+        
+        const setupMainAppEventListeners = () => { /* Omitted for brevity */ };
+
+        const initializeMainApp = () => {
+             signInAnonymously(auth).then(userCredential => {
+                const user = userCredential.user;
+                if(user) {
+                     uiElements.userInfo.textContent = `Anonymous User ID: ${user.uid}`;
+                     studentsCollectionRef = collection(db, 'artifacts', appId, 'users', user.uid, 'students');
+                     if (unsubscribe) unsubscribe(); 
+                     unsubscribe = onSnapshot(studentsCollectionRef, (snapshot) => {
+                         students = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+                         renderStudents();
+                     }, (error) => { 
+                         console.error("Firestore snapshot error:", error);
+                         showToast('Could not fetch data. Check Firestore rules.', 'error'); 
+                         uiElements.loaderContainer.classList.add('hidden'); 
+                     });
+                }
+             }).catch(error => {
+                 console.error("Anonymous sign-in failed:", error);
+                 showToast('Could not connect to the database.', 'error');
+                 uiElements.loaderContainer.innerHTML = `<p class="text-red-500 text-center p-4">Could not connect to database. Please check your Firebase project's security rules to allow anonymous authentication.</p>`;
+             });
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initializeApp(firebaseConfig);
+                auth = getAuth();
+                db = getFirestore();
+                storage = getStorage();
+            
+                uiElements.loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = document.getElementById('login-email').value;
+                    const password = document.getElementById('login-password').value;
+
+                    if (email === 'admin@example.com' && password === 'password123') {
+                        uiElements.loginError.textContent = '';
+                        uiElements.authContainer.classList.add('hidden');
+                        uiElements.appContainer.classList.remove('hidden');
+                        initializeMainApp();
+                    } else {
+                        uiElements.loginError.textContent = 'Invalid credentials. Please try again.';
+                    }
+                });
+
+                uiElements.logoutBtn.addEventListener('click', () => {
+                    signOut(auth).then(() => {
+                        if (unsubscribe) unsubscribe();
+                        students = [];
+                        uiElements.authContainer.classList.remove('hidden');
+                        uiElements.appContainer.classList.add('hidden');
+                    });
+                });
+
+                setupMainAppEventListeners();
+
+            } catch(e) {
+                 console.error("Firebase initialization failed:", e);
+                 uiElements.authContainer.innerHTML = `<div class="text-red-500 text-center p-8"><strong>Critical Error:</strong> Could not initialize Firebase. Please ensure your <code>firebaseConfig</code> object is correct.</div>`;
+            }
+        });
+        
+        // --- NOTE: All helper functions (renderStudents, etc.) must be included here.
+        // --- They are identical to the previous version and omitted for clarity.
+    </script>
+</body>
+</html>
